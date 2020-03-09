@@ -6,6 +6,8 @@ import os
 import sys
 import time
 import tempfile
+import traceback
+from multiprocessing import Process, Pipe
 
 import psutil
 
@@ -14,6 +16,29 @@ class TimeoutException (Exception): pass
 class MemorylimitException (Exception): pass
 class SubprocessException (Exception): pass
 class AnythingException (Exception): pass
+
+
+class FailsafeProcess(Process):
+    def __init__(self, *args, **kwargs):
+        Process.__init__(self, *args, **kwargs)
+        self._pconn, self._cconn = Pipe()
+        self._exception = None
+
+    def run(self):
+        try:
+            Process.run(self)
+            self._cconn.send(None)
+        except Exception as e:
+            tb = traceback.format_exc()
+            self._cconn.send((e, tb))
+            # raise e  # You can still rise this exception if you need to
+
+    @property
+    def exception(self):
+        if self._pconn.poll():
+            self._exception = self._pconn.recv()
+        return self._exception
+
 
 # create the function the subprocess can execute
 def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s, num_procs, grace_period_in_s, tmp_dir, *args, **kwargs):
@@ -186,7 +211,7 @@ class enforce_limits (object):
 					tmp_dir_name = None
 				
 				# create and start the process
-				subproc = multiprocessing.Process(target=subprocess_func, name="pynisher function call", args = (self2.func, child_conn, self.logger, self.mem_in_mb, self.cpu_time_in_s, self.wall_time_in_s, self.num_processes, self.grace_period_in_s, tmp_dir_name) + args ,kwargs = kwargs)
+				subproc = FailsafeProcess(target=subprocess_func, name="pynisher function call", args = (self2.func, child_conn, self.logger, self.mem_in_mb, self.cpu_time_in_s, self.wall_time_in_s, self.num_processes, self.grace_period_in_s, tmp_dir_name) + args ,kwargs = kwargs)
 				self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))
 
 				# start the process
@@ -209,7 +234,7 @@ class enforce_limits (object):
 
 				except EOFError:    # Don't see that in the unit tests :(
 					self.logger.debug("Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
-					self2.exit_status = AnythingException
+					self2.result, self2.exit_status = subproc.exception, AnythingException
 
 				except:
 					self.logger.debug("Something else went wrong, sorry.")

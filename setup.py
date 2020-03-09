@@ -2,9 +2,9 @@ from setuptools import setup
 
 
 setup(
-    name = 'pynisher',
+    name = 'pynisher2',
     version = "0.5.0",
-    packages = ['pynisher'],
+    packages = ['pynisher2'],
     install_requires = ['docutils>=0.3', 'setuptools', 'psutil'],
     author = "Stefan Falkner",
     author_email = "sfalkner@informatik.uni-freiburg.de",
