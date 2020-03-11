@@ -136,7 +136,6 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 		return_value = (None, AnythingException)
 	except:
 		raise
-		logger.debug("Some wired exception occured!")
 		
 	finally:
 		try:
@@ -235,9 +234,9 @@ class enforce_limits (object):
 				except EOFError:    # Don't see that in the unit tests :(
 					self.logger.debug("Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
 					self2.result, self2.exit_status = subproc.exception, AnythingException
-
-				except:
-					self.logger.debug("Something else went wrong, sorry.")
+				except Exception as ex:
+					self.logger.warning('Unhandled exception: ', ex)
+					self2.result, self2.exit_status = ex, AnythingException
 				finally:
 					self2.resources_function = resource.getrusage(resource.RUSAGE_CHILDREN)
 					self2.resources_pynisher = resource.getrusage(resource.RUSAGE_SELF)
