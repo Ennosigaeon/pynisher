@@ -225,6 +225,7 @@ class enforce_limits (object):
 						if parent_conn.poll(self.wall_time_in_s+self.grace_period_in_s):
 							self2.result, self2.exit_status = parent_conn.recv()
 						else:
+							os.killpg(os.getpgid(subproc.pid), signal.SIGTERM)
 							subproc.terminate()
 							self2.exit_status = TimeoutException
 							
