@@ -112,6 +112,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 		# at which time it is sent SIGKILL.
 		resource.setrlimit(resource.RLIMIT_CPU, (cpu_time_limit_in_s,cpu_time_limit_in_s+grace_period_in_s))
 
+	os.setsid()
 	# the actual function call
 	try:
 		logger.debug("call function")
