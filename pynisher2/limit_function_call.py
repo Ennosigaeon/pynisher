@@ -246,8 +246,9 @@ class enforce_limits(object):
                         "Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
                     self2.result, self2.exit_status = subproc.exception, AnythingException
                 except Exception as ex:
-                    self.logger.warning('Unhandled exception: ', ex)
-                    self2.result, self2.exit_status = ex, AnythingException
+                    self.logger.exception('Unhandled exception')
+                    self2.result = (ex, traceback.format_exc())
+                    self2.exit_status = AnythingException
                 finally:
                     self2.resources_function = resource.getrusage(resource.RUSAGE_CHILDREN)
                     self2.resources_pynisher = resource.getrusage(resource.RUSAGE_SELF)
