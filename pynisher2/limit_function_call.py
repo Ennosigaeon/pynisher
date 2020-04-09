@@ -42,6 +42,10 @@ class FailsafeProcess(Process):
             self._cconn.send((e, tb))
             # raise e  # You can still rise this exception if you need to
 
+    def clean_up(self):
+        self._pconn.close()
+        self._cconn.close()
+
     @property
     def exception(self):
         if self._pconn.poll():
@@ -265,6 +269,8 @@ class enforce_limits(object):
                         tmp_dir.cleanup()
 
                     # don't leave zombies behind
+                    parent_conn.close()
+                    subproc.clean_up()
                     subproc.join()
                 return self2.result
 
