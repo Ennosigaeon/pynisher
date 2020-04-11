@@ -133,11 +133,11 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
     except MemoryError:
         return_value = (None, MemorylimitException)
 
-    except OSError as e:
-        if e.errno == 11:
+    except OSError as ex:
+        if ex.errno == 11:
             return_value = (None, SubprocessException)
         else:
-            return_value = (None, AnythingException)
+            return_value = ((ex, traceback.format_exc()), AnythingException)
 
     except CpuTimeoutException:
         return_value = (None, CpuTimeoutException)
@@ -145,8 +145,8 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
     except TimeoutException:
         return_value = (None, TimeoutException)
 
-    except AnythingException as e:
-        return_value = (None, AnythingException)
+    except AnythingException as ex:
+        return_value = ((ex, traceback.format_exc()), AnythingException)
     except:
         raise
 
