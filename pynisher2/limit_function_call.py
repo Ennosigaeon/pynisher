@@ -12,19 +12,24 @@ from multiprocessing import Process, Pipe
 import psutil
 
 
-class CpuTimeoutException(Exception): pass
+class CpuTimeoutException(Exception):
+    pass
 
 
-class TimeoutException(Exception): pass
+class TimeoutException(Exception):
+    pass
 
 
-class MemorylimitException(Exception): pass
+class MemorylimitException(Exception):
+    pass
 
 
-class SubprocessException(Exception): pass
+class SubprocessException(Exception):
+    pass
 
 
-class AnythingException(Exception): pass
+class AnythingException(Exception):
+    pass
 
 
 class FailsafeProcess(Process):
@@ -61,18 +66,17 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
         # logs message with level debug on this logger
         logger.debug("signal handler: %i" % signum)
         if signum == signal.SIGXCPU:
-            # when process reaches soft limit --> a SIGXCPU signal is sent (it normally terminats the process)
+            # when process reaches soft limit --> a SIGXCPU signal is sent (it normally terminates the process)
             raise CpuTimeoutException
         elif signum == signal.SIGALRM:
-            # SIGALRM is sent to process when the specified time limit to an alarm function elapses (when real or clock time elapses)
+            # SIGALRM is sent to process when the specified time limit to an alarm function elapses (real or clock time)
             logger.debug("timeout")
             raise TimeoutException
         raise AnythingException
 
     # temporary directory to store stdout and stderr
-    if not tmp_dir is None:
-        logger.debug(
-            'Redirecting output of the function to files. Access them via the stdout and stderr attributes of the wrapped function.')
+    if tmp_dir is not None:
+        logger.debug('Redirecting output to files. Access them via the stdout and stderr attr of the wrapped function.')
 
         stdout = open(os.path.join(tmp_dir, 'std.out'), 'a', buffering=1)
         sys.stdout = stdout
@@ -158,7 +162,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
             pipe.close()
 
         except:
-            # this part should only fail if the parent process is alread dead, so there is not much to do anymore :)
+            # this part should only fail if the parent process is already dead, so there is not much to do anymore :)
             pass
         finally:
             # recursively kill all children
