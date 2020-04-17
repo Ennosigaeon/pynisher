@@ -209,6 +209,11 @@ class enforce_limits(object):
                 self2.stdout = None
                 self2.stderr = None
 
+                self2.default_handlers = {
+                    signal.SIGINT: signal.getsignal(signal.SIGINT),
+                    signal.SIGTERM: signal.getsignal(signal.SIGTERM)
+                }
+
             def __call__(self2, *args, **kwargs):
 
                 self2._reset_attributes()
@@ -235,6 +240,17 @@ class enforce_limits(object):
                 start = time.time()
                 subproc.start()
                 child_conn.close()
+
+                # The subprocess runs in a dedicated GID and is therefore not terminated if the parent terminates.
+                # We tap into SIGINT and SIGTERM to terminate the child process and re-raise the original signal
+                def handler(signum, frame):
+                    if subproc is not None and subproc.is_alive():
+                        os.killpg(os.getpgid(subproc.pid), signal.SIGTERM)
+                        signal.signal(signum, self2.default_handlers[signum])
+                        os.kill(os.getpid(), signum)
+
+                signal.signal(signal.SIGTERM, handler)
+                signal.signal(signal.SIGINT, handler)
 
                 try:
                     # read the return value
@@ -271,6 +287,10 @@ class enforce_limits(object):
                             self2.stderr = fh.read()
 
                         tmp_dir.cleanup()
+
+                    # Restore original signal handlers again
+                    signal.signal(signal.SIGTERM, self2.default_handlers[signal.SIGTERM])
+                    signal.signal(signal.SIGINT, self2.default_handlers[signal.SIGINT])
 
                     # don't leave zombies behind
                     parent_conn.close()
