@@ -5,6 +5,7 @@ import resource
 import signal
 import sys
 import tempfile
+import threading
 import time
 import traceback
 from multiprocessing import Process, Pipe
@@ -249,8 +250,9 @@ class enforce_limits(object):
                         signal.signal(signum, self2.default_handlers[signum])
                         os.kill(os.getpid(), signum)
 
-                signal.signal(signal.SIGTERM, handler)
-                signal.signal(signal.SIGINT, handler)
+                if threading.current_thread() is threading.main_thread():
+                    signal.signal(signal.SIGTERM, handler)
+                    signal.signal(signal.SIGINT, handler)
 
                 try:
                     # read the return value
@@ -289,8 +291,9 @@ class enforce_limits(object):
                         tmp_dir.cleanup()
 
                     # Restore original signal handlers again
-                    signal.signal(signal.SIGTERM, self2.default_handlers[signal.SIGTERM])
-                    signal.signal(signal.SIGINT, self2.default_handlers[signal.SIGINT])
+                    if threading.current_thread() is threading.main_thread():
+                        signal.signal(signal.SIGTERM, self2.default_handlers[signal.SIGTERM])
+                        signal.signal(signal.SIGINT, self2.default_handlers[signal.SIGINT])
 
                     # don't leave zombies behind
                     parent_conn.close()
