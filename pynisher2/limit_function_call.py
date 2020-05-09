@@ -10,9 +10,9 @@ import threading
 import time
 import traceback
 from multiprocessing import Process, Pipe
+from typing import Callable, Set
 
 import psutil
-from typing import Callable
 
 
 class CpuTimeoutException(Exception):
@@ -69,6 +69,7 @@ def subprocess_func(func: Callable,
                     cpu_time_limit_in_s: int,
                     wall_time_limit_in_s: int,
                     grace_period_in_s: int,
+                    affinity: Set[int],
                     tmp_dir: str,
                     *args, **kwargs):
     # simple signal handler to catch the signals for time limits
@@ -132,6 +133,9 @@ def subprocess_func(func: Callable,
         # at which time it is sent SIGKILL.
         resource.setrlimit(resource.RLIMIT_CPU, (cpu_time_limit_in_s, cpu_time_limit_in_s + grace_period_in_s))
 
+    if affinity is not None:
+        os.sched_setaffinity(0, affinity)
+
     os.setsid()
     # the actual function call
     try:
@@ -181,12 +185,14 @@ class enforce_limits(object):
                  cpu_time_in_s: int = None,
                  wall_time_in_s: int = None,
                  grace_period_in_s: int = None,
+                 affinity: Set[int] = None,
                  logger: logging.Logger = None,
                  capture_output: bool = False):
         self.mem_in_mb = mem_in_mb
         self.cpu_time_in_s = cpu_time_in_s
         self.wall_time_in_s = wall_time_in_s
         self.grace_period_in_s = 0 if grace_period_in_s is None else grace_period_in_s
+        self.affinity = affinity
         self.logger = logger if logger is not None else multiprocessing.get_logger()
         self.capture_output = capture_output
 
@@ -237,7 +243,7 @@ class enforce_limits(object):
                 # create and start the process
                 subproc = FailsafeProcess(target=subprocess_func, name="pynisher function call",
                                           args=(self2.func, child_conn, self.logger, self.mem_in_mb, self.cpu_time_in_s,
-                                                self.wall_time_in_s, self.grace_period_in_s,
+                                                self.wall_time_in_s, self.grace_period_in_s, self.affinity,
                                                 tmp_dir_name) + args,
                                           kwargs=kwargs)
                 self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))
