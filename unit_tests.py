@@ -24,6 +24,7 @@ logger.setLevel(logging.WARNING)
 
 
 # TODO: add tests with large return value to test for deadlock!
+# TODO: most of these test are garbage
 
 def rogue_subprocess():
     pid = os.getpid()
