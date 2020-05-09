@@ -1,4 +1,5 @@
 #! /bin/python
+import logging
 import multiprocessing
 import os
 import resource
@@ -11,6 +12,7 @@ import traceback
 from multiprocessing import Process, Pipe
 
 import psutil
+from typing import Callable
 
 
 class CpuTimeoutException(Exception):
@@ -60,8 +62,15 @@ class FailsafeProcess(Process):
 
 
 # create the function the subprocess can execute
-def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s,
-                    grace_period_in_s, tmp_dir, *args, **kwargs):
+def subprocess_func(func: Callable,
+                    pipe,
+                    logger: logging.Logger,
+                    mem_in_mb: float,
+                    cpu_time_limit_in_s: int,
+                    wall_time_limit_in_s: int,
+                    grace_period_in_s: int,
+                    tmp_dir: str,
+                    *args, **kwargs):
     # simple signal handler to catch the signals for time limits
     def handler(signum, frame):
         # logs message with level debug on this logger
@@ -85,7 +94,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
         stderr = open(os.path.join(tmp_dir, 'std.err'), 'a', buffering=1)
         sys.stderr = stderr
 
-    # catching all signals at this point turned out to interfer with the subprocess (e.g. using ROS)
+    # catching all signals at this point turned out to interfere with the subprocess (e.g. using ROS)
     signal.signal(signal.SIGALRM, handler)
     signal.signal(signal.SIGXCPU, handler)
     signal.signal(signal.SIGQUIT, handler)
@@ -167,8 +176,13 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 
 
 class enforce_limits(object):
-    def __init__(self, mem_in_mb=None, cpu_time_in_s=None, wall_time_in_s=None,
-                 grace_period_in_s=None, logger=None, capture_output=False):
+    def __init__(self,
+                 mem_in_mb: float = None,
+                 cpu_time_in_s: int = None,
+                 wall_time_in_s: int = None,
+                 grace_period_in_s: int = None,
+                 logger: logging.Logger = None,
+                 capture_output: bool = False):
         self.mem_in_mb = mem_in_mb
         self.cpu_time_in_s = cpu_time_in_s
         self.wall_time_in_s = wall_time_in_s
