@@ -157,22 +157,6 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertIsNone(wrapped_function(mem, 10, 0))
             self.assertEqual(wrapped_function.exit_status, pynisher2.TimeoutException)
 
-    @unittest.skipIf(not all_tests, "skipping too many processes test")
-    def test_num_processes(self):
-        print("Testing number of processes constraint.")
-        local_mem_in_mb = None
-        local_num_processes = 1
-        local_wall_time_in_s = None
-        local_grace_period = None
-
-        wrapped_function = pynisher2.enforce_limits(mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
-                                                    num_processes=local_num_processes,
-                                                    grace_period_in_s=local_grace_period)(simulate_work)
-
-        for processes in [2, 15, 50, 100, 250]:
-            self.assertIsNone(wrapped_function(0, 0, processes))
-            self.assertEqual(wrapped_function.exit_status, pynisher2.SubprocessException)
-
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_crash_unexpectedly(self):
         print("Testing an unexpected signal simulating a crash.")

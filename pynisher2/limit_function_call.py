@@ -60,7 +60,7 @@ class FailsafeProcess(Process):
 
 
 # create the function the subprocess can execute
-def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s, num_procs,
+def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s,
                     grace_period_in_s, tmp_dir, *args, **kwargs):
     # simple signal handler to catch the signals for time limits
     def handler(signum, frame):
@@ -108,12 +108,6 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
         mem_in_b = mem_in_mb * 1024 * 1024
         # the maximum area (in bytes) of address space which may be taken by the process.
         resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
-
-    # for now: don't allow the function to spawn subprocesses itself.
-    # resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
-    # Turns out, this is quite restrictive, so we don't use this option by default
-    if num_procs is not None:
-        resource.setrlimit(resource.RLIMIT_NPROC, (num_procs, num_procs))
 
     # schedule an alarm in specified number of seconds
     if wall_time_limit_in_s is not None:
@@ -173,11 +167,10 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 
 
 class enforce_limits(object):
-    def __init__(self, mem_in_mb=None, cpu_time_in_s=None, wall_time_in_s=None, num_processes=None,
+    def __init__(self, mem_in_mb=None, cpu_time_in_s=None, wall_time_in_s=None,
                  grace_period_in_s=None, logger=None, capture_output=False):
         self.mem_in_mb = mem_in_mb
         self.cpu_time_in_s = cpu_time_in_s
-        self.num_processes = num_processes
         self.wall_time_in_s = wall_time_in_s
         self.grace_period_in_s = 0 if grace_period_in_s is None else grace_period_in_s
         self.logger = logger if logger is not None else multiprocessing.get_logger()
@@ -189,8 +182,6 @@ class enforce_limits(object):
             self.logger.debug("Restricting your function to {} seconds cpu time.".format(self.cpu_time_in_s))
         if self.wall_time_in_s is not None:
             self.logger.debug("Restricting your function to {} seconds wall time.".format(self.wall_time_in_s))
-        if self.num_processes is not None:
-            self.logger.debug("Restricting your function to {} threads/processes.".format(self.num_processes))
         if self.grace_period_in_s is not None:
             self.logger.debug("Allowing a grace period of {} seconds.".format(self.grace_period_in_s))
 
@@ -232,7 +223,7 @@ class enforce_limits(object):
                 # create and start the process
                 subproc = FailsafeProcess(target=subprocess_func, name="pynisher function call",
                                           args=(self2.func, child_conn, self.logger, self.mem_in_mb, self.cpu_time_in_s,
-                                                self.wall_time_in_s, self.num_processes, self.grace_period_in_s,
+                                                self.wall_time_in_s, self.grace_period_in_s,
                                                 tmp_dir_name) + args,
                                           kwargs=kwargs)
                 self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))

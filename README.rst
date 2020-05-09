@@ -29,7 +29,7 @@ The full list of argments to enforce_limits reads:
 .. code-block:: python
 
 		pynisher.enforce_limits(mem_in_mb=None, cpu_time_in_s=None,\
-					wall_time_in_s=None, num_processes=None,\
+					wall_time_in_s=None,\
 					grace_period_in_s = None, logger = None)
 
 The first four are actual constraints on the memory, the CPU time, the wall time, and the
