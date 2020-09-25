@@ -270,11 +270,17 @@ class enforce_limits(object):
                 try:
                     # read the return value
                     if self.wall_time_in_s is not None:
-                        if parent_conn.poll(self.wall_time_in_s + self.grace_period_in_s):
+                        if parent_conn.poll(self.wall_time_in_s):
                             self2.result, self2.exit_status = parent_conn.recv()
                         else:
+                            self.logger.debug('Timeout reached. Stopping process with SIGTERM')
                             os.killpg(os.getpgid(subproc.pid), signal.SIGTERM)
                             subproc.terminate()
+                            subproc.join(self.grace_period_in_s)
+                            if subproc.is_alive():
+                                self.logger.debug('Grace period exceeded. Stopping process with SIGKILL')
+                                os.killpg(os.getpgid(subproc.pid), signal.SIGKILL)
+                                subproc.kill()
                             self2.exit_status = TimeoutException
 
                     else:
