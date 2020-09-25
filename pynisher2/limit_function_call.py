@@ -139,33 +139,36 @@ def subprocess_func(func: Callable,
     os.setsid()
     # the actual function call
     try:
-        logger.debug("call function")
+        logger.debug("function called")
         return_value = (func(*args, **kwargs), 0)
-        logger.debug("function returned properly: {}".format(return_value))
+        logger.debug("function returned properly")
     except MemoryError:
+        logger.debug("function raised MemorylimitException")
         return_value = (None, MemorylimitException)
 
     except OSError as ex:
+        logger.debug("function raised OSError")
         if ex.errno == 11:
             return_value = (None, SubprocessException)
         else:
             return_value = ((ex, traceback.format_exc()), AnythingException)
 
     except CpuTimeoutException:
+        logger.debug("function raised CpuTimeoutException")
         return_value = (None, CpuTimeoutException)
 
     except TimeoutException:
+        logger.debug("function raised TimeoutException")
         return_value = (None, TimeoutException)
 
     except AnythingException as ex:
+        logger.debug("function raised AnythingException")
         return_value = ((ex, traceback.format_exc()), AnythingException)
     except:
         raise
 
     finally:
         try:
-            logger.debug("return value: {}".format(return_value))
-
             pipe.send(return_value)
             pipe.close()
 
@@ -246,7 +249,6 @@ class enforce_limits(object):
                                                 self.wall_time_in_s, self.grace_period_in_s, self.affinity,
                                                 tmp_dir_name) + args,
                                           kwargs=kwargs)
-                self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))
 
                 # start the process
                 start = time.time()
@@ -278,9 +280,7 @@ class enforce_limits(object):
                     else:
                         self2.result, self2.exit_status = parent_conn.recv()
 
-                except EOFError:  # Don't see that in the unit tests :(
-                    self.logger.debug(
-                        "Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
+                except EOFError:
                     self2.result, self2.exit_status = subproc.exception, AnythingException
                 except Exception as ex:
                     self.logger.exception('Unhandled exception')
