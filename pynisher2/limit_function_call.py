@@ -164,7 +164,8 @@ def subprocess_func(func: Callable,
     except AnythingException as ex:
         logger.debug("function raised AnythingException")
         return_value = ((ex, traceback.format_exc()), AnythingException)
-    except:
+    except Exception as ex:
+        logger.warning('Unhandled exception: {}'.format(ex))
         raise
 
     finally:
