@@ -64,7 +64,6 @@ class FailsafeProcess(Process):
 # create the function the subprocess can execute
 def subprocess_func(func: Callable,
                     pipe,
-                    logger: logging.Logger,
                     mem_in_mb: float,
                     cpu_time_limit_in_s: int,
                     wall_time_limit_in_s: int,
@@ -74,21 +73,16 @@ def subprocess_func(func: Callable,
                     *args, **kwargs):
     # simple signal handler to catch the signals for time limits
     def handler(signum, frame):
-        # logs message with level debug on this logger
-        logger.debug("signal handler: %i" % signum)
         if signum == signal.SIGXCPU:
             # when process reaches soft limit --> a SIGXCPU signal is sent (it normally terminates the process)
             raise CpuTimeoutException
         elif signum == signal.SIGALRM:
             # SIGALRM is sent to process when the specified time limit to an alarm function elapses (real or clock time)
-            logger.debug("timeout")
             raise TimeoutException
         raise AnythingException
 
     # temporary directory to store stdout and stderr
     if tmp_dir is not None:
-        logger.debug('Redirecting output to files. Access them via the stdout and stderr attr of the wrapped function.')
-
         stdout = open(os.path.join(tmp_dir, 'std.out'), 'a', buffering=1)
         sys.stdout = stdout
 
@@ -139,34 +133,24 @@ def subprocess_func(func: Callable,
     os.setsid()
     # the actual function call
     try:
-        logger.debug("function called")
         return_value = (func(*args, **kwargs), 0)
-        logger.debug("function returned properly")
     except MemoryError:
-        logger.debug("function raised MemorylimitException")
         return_value = (None, MemorylimitException)
 
     except OSError as ex:
-        logger.debug("function raised OSError")
         if ex.errno == 11:
             return_value = (None, SubprocessException)
         else:
             return_value = ((ex, traceback.format_exc()), AnythingException)
 
     except CpuTimeoutException:
-        logger.debug("function raised CpuTimeoutException")
         return_value = (None, CpuTimeoutException)
 
     except TimeoutException:
-        logger.debug("function raised TimeoutException")
         return_value = (None, TimeoutException)
 
-    except AnythingException as ex:
-        logger.debug("function raised AnythingException")
-        return_value = ((ex, traceback.format_exc()), AnythingException)
     except Exception as ex:
-        logger.warning('Unhandled exception: {}'.format(ex))
-        raise
+        return_value = ((ex, traceback.format_exc()), AnythingException)
 
     finally:
         try:
@@ -199,15 +183,6 @@ class enforce_limits(object):
         self.affinity = affinity
         self.logger = logger if logger is not None else multiprocessing.get_logger()
         self.capture_output = capture_output
-
-        if self.mem_in_mb is not None:
-            self.logger.debug("Restricting your function to {} mb memory.".format(self.mem_in_mb))
-        if self.cpu_time_in_s is not None:
-            self.logger.debug("Restricting your function to {} seconds cpu time.".format(self.cpu_time_in_s))
-        if self.wall_time_in_s is not None:
-            self.logger.debug("Restricting your function to {} seconds wall time.".format(self.wall_time_in_s))
-        if self.grace_period_in_s is not None:
-            self.logger.debug("Allowing a grace period of {} seconds.".format(self.grace_period_in_s))
 
     def __call__(self, func):
 
@@ -246,7 +221,7 @@ class enforce_limits(object):
 
                 # create and start the process
                 subproc = FailsafeProcess(target=subprocess_func, name="pynisher function call",
-                                          args=(self2.func, child_conn, self.logger, self.mem_in_mb, self.cpu_time_in_s,
+                                          args=(self2.func, child_conn, self.mem_in_mb, self.cpu_time_in_s,
                                                 self.wall_time_in_s, self.grace_period_in_s, self.affinity,
                                                 tmp_dir_name) + args,
                                           kwargs=kwargs)
